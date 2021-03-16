@@ -44,7 +44,8 @@ static void WritePixelsToBuffer_Vulkan(
     const UTextureRenderTarget2D &RenderTarget,
     carla::Buffer &Buffer,
     uint32 Offset,
-    FRHICommandListImmediate &InRHICmdList)
+    FRHICommandListImmediate &InRHICmdList,
+    const FImageResizer& ImageResizer)
 {
   check(IsInRenderingThread());
   auto RenderResource =
@@ -60,7 +61,7 @@ static void WritePixelsToBuffer_Vulkan(
   // NS: Extra copy here, don't know how to avoid it.
   InRHICmdList.ReadSurfaceData(
       Texture,
-      FIntRect(0, 0, Rect.X, Rect.Y),
+      FIntRect(ImageResizer.MinX, ImageResizer.MinY, ImageResizer.MaxX, ImageResizer.MaxY),
       gPixels,
       FReadSurfaceDataFlags(RCM_UNorm, CubeFace_MAX));
   Buffer.copy_from(Offset, gPixels);
@@ -127,14 +128,14 @@ void FPixelReader::WritePixelsToBuffer(
     UTextureRenderTarget2D &RenderTarget,
     carla::Buffer &Buffer,
     uint32 Offset,
-    FRHICommandListImmediate &InRHICmdList
-    )
+    FRHICommandListImmediate &InRHICmdList,
+    const FImageResizer& ImageResizer)
 {
   check(IsInRenderingThread());
 
   if (IsVulkanPlatform(GMaxRHIShaderPlatform) || IsD3DPlatform(GMaxRHIShaderPlatform, false))
   {
-    WritePixelsToBuffer_Vulkan(RenderTarget, Buffer, Offset, InRHICmdList);
+    WritePixelsToBuffer_Vulkan(RenderTarget, Buffer, Offset, InRHICmdList, ImageResizer);
     return;
   }
 

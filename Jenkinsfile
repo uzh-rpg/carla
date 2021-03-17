@@ -85,7 +85,7 @@ pipeline
                         {
                             steps
                             {
-                                sh './Update.sh'
+                                sh 'git clone --depth 1 -b TDA/Remote_Map https://bitbucket.org/carla-simulator/carla-content Unreal/CarlaUE4/Content/Carla'
                             }
                         }
                         stage('ubuntu package')
@@ -93,7 +93,6 @@ pipeline
                             steps
                             {
                                 sh 'make package ARGS="--python-version=3.7,2 --chrono"'
-                                sh 'make package ARGS="--packages=AdditionalMaps,Town06_Opt,Town07_Opt,Town10HD_Opt --target-archive=AdditionalMaps --clean-intermediate --python-version=3.7,2"'
                                 sh 'make examples ARGS="localhost 3654"'
                             }
                             post
@@ -278,7 +277,7 @@ pipeline
                             {
                                 bat """
                                     call ../setEnv64.bat
-                                    call Update.bat
+                                    git clone --depth 1 -b TDA/Remote_Map https://bitbucket.org/carla-simulator/carla-content Unreal/CarlaUE4/Content/Carla
                                 """
                             }
                         }
@@ -289,10 +288,6 @@ pipeline
                                 bat """
                                     call ../setEnv64.bat
                                     make package ARGS="--chrono"
-                                """
-                                bat """
-                                    call ../setEnv64.bat
-                                    make package ARGS="--packages=AdditionalMaps,Town06_Opt,Town07_Opt,Town10HD_Opt --target-archive=AdditionalMaps --clean-intermediate"
                                 """
                             }
                             post {

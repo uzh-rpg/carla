@@ -85,7 +85,7 @@ pipeline
                         {
                             steps
                             {
-                                sh 'git clone --depth 1 -b TDA/Remote_Map https://bitbucket.org/carla-simulator/carla-content Unreal/CarlaUE4/Content/Carla'
+                                sh 'git clone --depth 1 -b TDA/Maps https://bitbucket.org/carla-simulator/carla-content Unreal/CarlaUE4/Content/Carla'
                             }
                         }
                         stage('ubuntu package')

@@ -15,6 +15,8 @@
   * Added performance benchmarking section to documentation
   * CARLA is compatible with the last RoadRunner nomenclature for road assets
   * Fixed a bug when importing a FBX map with some **_** in the FBX name
+  * Extended make import process for applying road painter materials (carla art tool)
+  * Added creation of custom JSON file for applying decals to imported roads
   * Fix bug in carla.Transform.get_up_vector()
   * When setting a global plan at the LocalPlanner, it is now optional to stop the automatic fill of the waypoint buffer
   * API extensions:

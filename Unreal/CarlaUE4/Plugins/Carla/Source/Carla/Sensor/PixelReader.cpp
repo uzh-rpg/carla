@@ -76,7 +76,7 @@ static void WritePixelsToBuffer_Vulkan(
 // Temporal; this avoid allocating the array each time
 TArray<FFloat16Color> gFloatPixels;
 
-static void WriteFloatPixelsToBuffer_Vulkan(
+static void WriteFloatPixels2DToBuffer_Vulkan(
     const UTextureRenderTarget2D &RenderTarget,
     carla::Buffer &Buffer,
     uint32 Offset,
@@ -108,6 +108,44 @@ static void WriteFloatPixelsToBuffer_Vulkan(
     float y = (color.G.GetFloat() - 0.5f)*4.f;
     IntermediateBuffer.Add(x);
     IntermediateBuffer.Add(y);
+  }
+  Buffer.copy_from(Offset, IntermediateBuffer);
+}
+
+static void WriteFloatPixels3DToBuffer_Vulkan(
+    const UTextureRenderTarget2D &RenderTarget,
+    carla::Buffer &Buffer,
+    uint32 Offset,
+    FRHICommandListImmediate &InRHICmdList)
+{
+  check(IsInRenderingThread());
+  gFloatPixels.Empty();
+  auto RenderResource =
+      static_cast<const FTextureRenderTarget2DResource *>(RenderTarget.Resource);
+  FTexture2DRHIRef Texture = RenderResource->GetRenderTargetTexture();
+  if (!Texture)
+  {
+    return;
+  }
+
+  FIntPoint Rect = RenderResource->GetSizeXY();
+
+  // NS: Extra copy here, don't know how to avoid it.
+  InRHICmdList.ReadSurfaceFloatData(
+      Texture,
+      FIntRect(0, 0, Rect.X, Rect.Y),
+      gFloatPixels,
+      CubeFace_PosX,0,0);
+
+  TArray<float> IntermediateBuffer;
+  IntermediateBuffer.Reserve(gFloatPixels.Num() * 3);
+  for (FFloat16Color& color : gFloatPixels) {
+    float x = (color.R.GetFloat() - 0.5f) * 200.f;
+    float y = (color.G.GetFloat() - 0.5f) * 200.f;
+    float z = (color.B.GetFloat() - 0.5f) * 200.f;
+    IntermediateBuffer.Add(x);
+    IntermediateBuffer.Add(y);
+    IntermediateBuffer.Add(z);
   }
   Buffer.copy_from(Offset, IntermediateBuffer);
 }
@@ -174,7 +212,8 @@ void FPixelReader::WritePixelsToBuffer(
     carla::Buffer &Buffer,
     uint32 Offset,
     FRHICommandListImmediate &InRHICmdList,
-    bool use16BitFormat
+    bool use16BitFormat,
+    bool threeDimensional
     )
 {
   TRACE_CPUPROFILER_EVENT_SCOPE_STR(__FUNCTION__);
@@ -184,7 +223,11 @@ void FPixelReader::WritePixelsToBuffer(
   {
     if (use16BitFormat)
     {
-      WriteFloatPixelsToBuffer_Vulkan(RenderTarget, Buffer, Offset, InRHICmdList);
+      if (threeDimensional) {
+        WriteFloatPixels3DToBuffer_Vulkan(RenderTarget, Buffer, Offset, InRHICmdList);
+      } else {
+        WriteFloatPixels2DToBuffer_Vulkan(RenderTarget, Buffer, Offset, InRHICmdList);
+      }
     }
     else
     {

@@ -997,6 +997,7 @@ class CameraManager(object):
                 'chromatic_aberration_intensity': '0.5',
                 'chromatic_aberration_offset': '0'}],
             ['sensor.camera.optical_flow', cc.Raw, 'Optical Flow', {}],
+            ['sensor.camera.scene_flow', cc.Raw, 'Scene Flow', {}],
         ]
         world = self._parent.get_world()
         bp_library = world.get_blueprint_library()
@@ -1090,6 +1091,16 @@ class CameraManager(object):
             array = array[:, :, :3]
             array = array[:, :, ::-1]
             self.surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
+        elif self.sensors[self.index][0].startswith('sensor.camera.scene_flow'):
+            array = image.get_color_coded_scene_flow_depth_shift()
+            array = np.frombuffer(array, dtype=np.dtype('uint8'))
+            array = np.reshape(array, (image.height, image.width, 4))
+            array = array[:, :, :3]
+            array = array[:, :, ::-1]
+            self.surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
+            raw_data = np.frombuffer(image.raw_data, dtype=np.dtype('float32'))
+            raw_data = np.reshape(raw_data, (image.height, image.width, 3))
+            print(raw_data.mean(axis=(0, 1)))
         else:
             image.convert(self.sensors[self.index][1])
             array = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))

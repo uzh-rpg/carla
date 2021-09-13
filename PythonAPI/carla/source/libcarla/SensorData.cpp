@@ -52,6 +52,14 @@ namespace data {
     return out;
   }
 
+  std::ostream &operator<<(std::ostream &out, const SceneFlowImage &image) {
+    out << "SceneFlowImage(frame=" << std::to_string(image.GetFrame())
+        << ", timestamp=" << std::to_string(image.GetTimestamp())
+        << ", size=" << std::to_string(image.GetWidth()) << 'x' << std::to_string(image.GetHeight())
+        << ')';
+    return out;
+  }
+
   std::ostream &operator<<(std::ostream &out, const LidarMeasurement &meas) {
     out << "LidarMeasurement(frame=" << std::to_string(meas.GetFrame())
         << ", timestamp=" << std::to_string(meas.GetTimestamp())
@@ -317,6 +325,53 @@ static boost::python::numpy::ndarray ColorCodedFlow (
   bn::dtype type = bn::dtype::get_builtin<uint8_t>();
   return bn::from_data(&result[0], type, shape, stride, bp::object()).copy();
 }
+
+// method to visualize scene flow images
+static boost::python::numpy::ndarray ColorCodedSceneFlowDepthShift (
+    carla::sensor::data::SceneFlowImage& image) {
+  namespace bp = boost::python;
+  namespace bn = boost::python::numpy;
+  namespace csd = carla::sensor::data;
+  std::vector<uint8_t> result;
+  result.resize(image.GetHeight()*image.GetWidth()* 4);
+
+  // lambda for computing batches of pixels
+  auto command = [&] (size_t min_index, size_t max_index) {
+    for (size_t index = min_index; index < max_index; index++) {
+      float vz = image[index].z;
+
+      float intensity = std::abs(vz) / 100.f;
+      bool pos = vz > 0.f;
+
+      uint8_t R = static_cast<uint8_t>(pos ? intensity*255.f : 0.f);
+      uint8_t B = static_cast<uint8_t>(pos ? 0.f : intensity*255.f);
+      result[4*index] = B;
+      result[4*index + 1] = 0;
+      result[4*index + 2] = R;
+      result[4*index + 3] = 0;
+    }
+  };
+  size_t num_threads = std::max(8u, std::thread::hardware_concurrency());
+  size_t batch_size = image.size() / num_threads;
+  std::vector<std::thread*> t(num_threads+1);
+
+  for(size_t n = 0; n < num_threads; n++) {
+    t[n] = new std::thread(command, n * batch_size, (n+1) * batch_size);
+  }
+  t[num_threads] = new std::thread(command, num_threads * batch_size, image.size());
+
+  for(size_t n = 0; n <= num_threads; n++) {
+    if(t[n]->joinable()){
+      t[n]->join();
+    }
+    delete t[n];
+  }
+
+  bp::tuple shape = bp::make_tuple(result.size());
+  bp::tuple stride = bp::make_tuple(sizeof(uint8_t));
+  bn::dtype type = bn::dtype::get_builtin<uint8_t>();
+  return bn::from_data(&result[0], type, shape, stride, bp::object()).copy();
+}
 #endif
 
 template <typename T>
@@ -406,6 +461,25 @@ void export_sensor_data() {
       return self.at(pos);
     })
     .def("__setitem__", +[](csd::OpticalFlowImage &self, size_t pos, csd::OpticalFlowPixel color) {
+      self.at(pos) = color;
+    })
+    .def(self_ns::str(self_ns::self))
+  ;
+
+  class_<csd::SceneFlowImage, bases<cs::SensorData>, boost::noncopyable, boost::shared_ptr<csd::SceneFlowImage>>("SceneFlowImage", no_init)
+    .add_property("width", &csd::SceneFlowImage::GetWidth)
+    .add_property("height", &csd::SceneFlowImage::GetHeight)
+    .add_property("fov", &csd::SceneFlowImage::GetFOVAngle)
+    .add_property("raw_data", &GetRawDataAsBuffer<csd::SceneFlowImage>)
+    #ifndef _WIN32
+    .def("get_color_coded_scene_flow_depth_shift", &ColorCodedSceneFlowDepthShift)
+    #endif
+    .def("__len__", &csd::SceneFlowImage::size)
+    .def("__iter__", iterator<csd::SceneFlowImage>())
+    .def("__getitem__", +[](const csd::SceneFlowImage &self, size_t pos) -> csd::SceneFlowPixel {
+      return self.at(pos);
+    })
+    .def("__setitem__", +[](csd::SceneFlowImage &self, size_t pos, csd::SceneFlowPixel color) {
       self.at(pos) = color;
     })
     .def(self_ns::str(self_ns::self))

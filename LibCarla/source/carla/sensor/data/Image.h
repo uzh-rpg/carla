@@ -19,6 +19,8 @@ namespace data {
   /// An image of 64-bit BGRA colors (16-bit channels)
   using OpticalFlowImage = ImageTmpl<OpticalFlowPixel>;
 
+  using SceneFlowImage = ImageTmpl<SceneFlowPixel>;
+
 } // namespace data
 } // namespace sensor
 } // namespace carla

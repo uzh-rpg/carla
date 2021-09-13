@@ -62,7 +62,7 @@ public:
   ///
   /// @pre To be called from game-thread.
   template <typename TSensor>
-  static void SendPixelsInRenderThread(TSensor &Sensor, bool use16BitFormat = false);
+  static void SendPixelsInRenderThread(TSensor &Sensor, bool use16BitFormat = false, bool threeDimensional = false);
 
 private:
 
@@ -74,7 +74,8 @@ private:
       carla::Buffer &Buffer,
       uint32 Offset,
       FRHICommandListImmediate &InRHICmdList,
-      bool use16BitFormat = false);
+      bool use16BitFormat = false,
+      bool threeDimensional = false);
 
 };
 
@@ -83,7 +84,7 @@ private:
 // =============================================================================
 
 template <typename TSensor>
-void FPixelReader::SendPixelsInRenderThread(TSensor &Sensor, bool use16BitFormat)
+void FPixelReader::SendPixelsInRenderThread(TSensor &Sensor, bool use16BitFormat, bool threeDimensional)
 {
   TRACE_CPUPROFILER_EVENT_SCOPE(FPixelReader::SendPixelsInRenderThread);
   check(Sensor.CaptureRenderTarget != nullptr);
@@ -101,7 +102,7 @@ void FPixelReader::SendPixelsInRenderThread(TSensor &Sensor, bool use16BitFormat
   // game-thread.
   ENQUEUE_RENDER_COMMAND(FWritePixels_SendPixelsInRenderThread)
   (
-    [&Sensor, Stream=Sensor.GetDataStream(Sensor), use16BitFormat](auto &InRHICmdList) mutable
+    [&Sensor, Stream=Sensor.GetDataStream(Sensor), use16BitFormat, threeDimensional](auto &InRHICmdList) mutable
     {
       TRACE_CPUPROFILER_EVENT_SCOPE_STR("FWritePixels_SendPixelsInRenderThread");
 
@@ -113,7 +114,7 @@ void FPixelReader::SendPixelsInRenderThread(TSensor &Sensor, bool use16BitFormat
             *Sensor.CaptureRenderTarget,
             Buffer,
             carla::sensor::SensorRegistry::get<TSensor *>::type::header_offset,
-            InRHICmdList, use16BitFormat);
+            InRHICmdList, use16BitFormat, threeDimensional);
 
         if(Buffer.data())
         {

@@ -70,6 +70,31 @@ namespace data {
   };
 #pragma pack(pop)
 
+#pragma pack(push, 1)
+  /// Scene flow pixel format. 3 channel float data.
+  struct SceneFlowPixel {
+    SceneFlowPixel() = default;
+    SceneFlowPixel(const SceneFlowPixel &) = default;
+
+    SceneFlowPixel(float x, float y)
+      : x(x), y(y) {}
+
+    SceneFlowPixel &operator=(const SceneFlowPixel &) = default;
+
+    bool operator==(const SceneFlowPixel &rhs) const  {
+      return (x == rhs.x) && (y == rhs.y) && (z == rhs.z);
+    }
+
+    bool operator!=(const SceneFlowPixel &rhs) const  {
+      return !(*this == rhs);
+    }
+
+    float x = 0;
+    float y = 0;
+    float z = 0;
+  };
+#pragma pack(pop)
+
 } // namespace data
 } // namespace sensor
 } // namespace carla
